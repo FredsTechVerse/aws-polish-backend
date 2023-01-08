@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { S3Client } = require("@aws-sdk/client-s3");
+// const { S3Client } = require("@aws-sdk/client-s3");
 const aws = require("aws-sdk");
 const express = require("express");
 const multer = require("multer");
@@ -55,7 +55,7 @@ const storage = multerS3({
     cb(null, { fieldName: file.fieldname });
   },
   key: function (req, file, cb) {
-    cb(null, Date.now().toString());
+    cb(null, `trial-${Date.now()}.pdf`);
   },
 });
 const upload = multer({
@@ -68,9 +68,10 @@ app.post(
   confirmReq,
   upload.single("photos"),
   function (req, res, next) {
+    console.log(req.file);
     res.send({
-      data: req.files,
-      msg: "Successfully uploaded " + req.files + " files!",
+      data: req.file,
+      msg: "Successfully uploaded " + req.file + " files!",
     });
   }
 );
