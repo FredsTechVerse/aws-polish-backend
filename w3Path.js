@@ -9,14 +9,11 @@ const app = express();
 // s3 Package only seems to be useful for authenticaton.
 
 // Even after update , the could not load credentials from any providers still persisted.
-aws.config.update({
-  accessKeyId: process.env.S3_ACCESS_KEY,
-  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-  region: process.env.S3_BUCKET_REGION,
-  // secretAccessKey: process.env.S3_SECRET,
-  // accessKeyId: process.env.S3_ACCESS_KEY,
-  // region: "us-east-2",
-});
+// aws.config.update({
+//   accessKeyId: process.env.S3_ACCESS_KEY,
+//   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+//   region: process.env.S3_BUCKET_REGION,
+// });
 
 // NEW VERSION FOR AUTHENTICATION
 //================================
@@ -26,27 +23,18 @@ aws.config.update({
 //   accessKeyId: process.env.S3_ACCESS_KEY,
 //   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
 // });
-const region = process.env.S3_BUCKET_REGION;
-const accessKeyId = process.env.S3_ACCESS_KEY;
-const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-
-const s3 = new S3Client({
-  region,
-  accessKeyId,
-  secretAccessKey,
-});
 
 // const s3 = new aws.S3();
 
 // OLD VERSION FOR AUTHENTICATION
 //================================
-// const s3 = new aws.S3({
-//   accessKeyId: process.env.S3_ACCESS_KEY,
-//   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-//   region: process.env.S3_BUCKET_REGION,
-// });
+const s3 = new aws.S3({
+  accessKeyId: process.env.S3_ACCESS_KEY,
+  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+  region: process.env.S3_BUCKET_REGION,
+});
 
-const rawBody = (req, res, next) => {
+const confirmReq = (req, res, next) => {
   console.log("Upload request successfully received.");
   next();
 };
@@ -60,38 +48,24 @@ const rawBody = (req, res, next) => {
 // app.use(express.json()); //Used to parse JSON bodies
 // app.use(cors());
 
-// const upload = multer({
-//   storage: multerS3({
-//     s3: s3,
-//     bucket: process.env.S3_BUCKET_NAME,
-//     metadata: function (req, file, cb) {
-//       cb(null, { fieldName: file.fieldname });
-//     },
-//     key: function (req, file, cb) {
-//       const ext = file.mimetype.split("/")[1];
-//       cb(null, `${file.fieldname}-${Date.now()}.${ext}`);
-
-//       // cb(null, Date.now().toString());
-//     },
-//   }),
-// });
-
+const storage = multerS3({
+  s3,
+  bucket: process.env.S3_BUCKET_NAME,
+  metadata: function (req, file, cb) {
+    cb(null, { fieldName: file.fieldname });
+  },
+  key: function (req, file, cb) {
+    cb(null, Date.now().toString());
+  },
+});
 const upload = multer({
-  storage: multerS3({
-    s3: s3,
-    bucket: process.env.S3_BUCKET_NAME,
-    metadata: function (req, file, cb) {
-      cb(null, { fieldName: file.fieldname });
-    },
-    key: function (req, file, cb) {
-      cb(null, Date.now().toString());
-    },
-  }),
+  storage,
 });
 
+// OUR GRACIOUS ROUTES.
 app.post(
   "/upload",
-  rawBody,
+  confirmReq,
   upload.single("photos"),
   function (req, res, next) {
     res.send({
