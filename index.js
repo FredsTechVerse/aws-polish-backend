@@ -1,17 +1,43 @@
+// APP CONFIGURATION
 const express = require("express");
 const app = express();
 
 const fs = require("fs"); //Enables us to interact with the servers fs performing crud ops to it.
-const util = require("util"); //Kinda revolutionalizes fs methods to promises which become sweeter to handle.s
+const util = require("util"); //Kinda revolutionalizes fs methods to promises which become sweeter to handle.
 const unlinkFile = util.promisify(fs.unlink); //Nispy method for deleting files.
+//Modules that handle our uploads and are concerened about their storage affairs.
+const multer = require("multer");
+const multerS3 = require("multer-s3");
 
-const multer = require("multer"); //Module that handles our uploads and is concerened about their storage affairs.
-
+// ALTERNATIVE A
+//==============
 // Instead of using the complexities / flexibilities of storage prop, we just use the dest prop and boom done.
+// const upload = multer({ dest: "uploads/" });
 
-// FOR THE FILE TO BE READABLE WE HAVE TO CONFIGURE THE FOLLOWING TWO PARAMETERS
-//===============================================================================
-// Step 1 : Configuration for Multer
+// ALTERNATIVE B
+//================
+// Step 1 : Configuring / Preparing our storage unit to our liking.
+/*
+const storage = multerS3({
+  s3,
+  bucket: process.env.S3_BUCKET_NAME,
+  metadata: function (req, file, cb) {
+    cb(null, { fieldName: file.fieldname });
+  },
+  key: function (req, file, cb) {
+    cb(null, `Skill-${Date.now()}.jpeg`);
+  },
+});
+
+// Step 2 : Configuring multer to use our storage.
+const upload = multer({
+  storage: storage,
+});
+
+*/
+// ALTERNATIVE C
+//================
+// Step 1 : Configuring / Preparing our storage unit to our liking.
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads");
@@ -22,8 +48,9 @@ const multerStorage = multer.diskStorage({
   },
 });
 
-// Step 2 : Applying the  Multer Filter
-// Only allows pdf files to be uploaded
+// Step 2 : Adding a filter to our storage unit.
+// For example, we can allow the user to upload only images.
+// We can do that by filtering the files based on their MIME type.
 
 const multerFilter = (req, file, cb) => {
   if (file.mimetype.split("/")[1] === "png") {
@@ -33,31 +60,16 @@ const multerFilter = (req, file, cb) => {
   }
 };
 
-const rawBody = (req, res, next) => {
-  console.log(
-    "Always rememember that the req.file is created after multer action for human understanding!"
-  );
-  // console.log(req.file); //Returns an undefined value.
-  // Observation
-  // This file is non-existent  on the body. THe upload variable made to be a function by .single knows how to destructure this multipart/formData
-  next();
-};
-// const { uploadFile, getFileStream } = require("./s3"); //Functions that deals with the s3. Concerns with storage our files to s3
-
-// ALTERNATIVE A
-// const upload = multer({ dest: "uploads/pictures/" }); //Storage has been directly defined on the upload line.
-
-// ALTERNATIVE B
+// Step 3 : Configuring multer to use our storage and filter.
 const upload = multer({
   storage: multerStorage,
   fileFilter: multerFilter,
 });
 
-app.post("/documents", rawBody, upload.single("pdf"), async (req, res) => {
-  // The file object is created purely by multer.Videos are also allowed mehn. How cool!
-  console.log("Requested successfully received.");
+app.post("/documents", upload.single("pdf"), async (req, res) => {
   const { file } = req; //Created after multer does its thing.
-  console.log(req.file); // These is the incomin file banda
+
+  console.log(req.file); // These is the incoming file banda
   console.log;
   res.status(200);
 });
